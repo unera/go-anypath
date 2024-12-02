@@ -48,11 +48,11 @@ func parsePath(path string) ([]any, error) {
 
 		bracketIndex = ('[' index ']')
 			%{{
-				index, err := strconv.ParseInt(string(data[ts:te]), 10, 32)
+				index, err := strconv.ParseInt(string(data[ts:te]), 10, 64)
 				if err != nil {
 					return nil, err
 				}
-				pushFound(int(index))
+				pushFound(index)
 			}}
 		;
 

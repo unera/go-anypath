@@ -32,106 +32,128 @@ func (a *Anypath) Extract(path string) (*any, error) {
 	return a.extract(pathElements, "", &a.Raw)
 }
 
+// Exists returns true if path is present in the object
+func (a *Anypath) Exists(path string) bool {
+	_, err := a.Extract(path)
+	return err == nil
+}
+
 func (a *Anypath) extract(path []any, tracePath string, o *any) (*any, error) {
 	if len(path) == 0 {
 		return o, nil
 	}
 
 	path0 := path[0]
-	var fullPath string
+	var (
+		fullPath string
+		index    int64
+		newO     any
+		uindex   uint64
+		aindex   any
+	)
 	switch path0.(type) {
-	case int:
+	case int64:
 		fullPath = fmt.Sprintf("%s[%d]", tracePath, path0)
 	case string:
 		fullPath = fmt.Sprintf("%s.%s", tracePath, path0)
 	}
-	if *o == nil {
-		return nil, fmt.Errorf("%s: Can not dereference Nil", fullPath)
+
+	e := func(msg ...string) (*any, error) {
+		if len(msg) == 0 {
+			return nil, fmt.Errorf("%s: Can not find path", fullPath)
+		}
+		return nil, fmt.Errorf("%s: %s", fullPath, msg[0])
 	}
-	// Invalid Kind = iota
-	// Bool
-	// Int
-	// Int8
-	// Int16
-	// Int32
-	// Int64
-	// Uint
-	// Uint8
-	// Uint16
-	// Uint32
-	// Uint64
-	// Uintptr
-	// Float32
-	// Float64
-	// Complex64
-	// Complex128
-	// Chan
-	// Func
-	// Interface
-	// Map
-	// Pointer
-	// String
-	// Struct
-	// UnsafePointer
+
+	if *o == nil {
+		return e("Can not dereference Nil")
+	}
 
 	t, v := reflect.TypeOf(*o), reflect.ValueOf(*o)
 
 	switch t.Kind() {
 	case reflect.Slice, reflect.Array:
 		switch path0.(type) {
-		case int:
-			var (
-				index int
-				newO  any
-			)
-			index = path0.(int)
-			if index >= v.Len() {
+		case int64:
+			index = path0.(int64)
+			if int(index) >= v.Len() {
 				goto wrongPath
 			}
 			if index < 0 {
-				index = v.Len() + index
+				index = int64(v.Len()) + index
 				if index < 0 {
 					goto wrongPath
 				}
 			}
-			newO = v.Index(index).Interface()
+			newO = v.Index(int(index)).Interface()
 			return a.extract(path[1:], fullPath, &newO)
 		wrongPath:
-			return nil, fmt.Errorf("%s: Can not find path", fullPath)
+			return e()
 
 		default:
-			return nil, fmt.Errorf("%s: Can not find path", fullPath)
+			return e()
 		}
+
 	case reflect.Map:
-		if _, ok := path0.(string); !ok {
-			return nil, fmt.Errorf("%s: Can not find path 6", fullPath)
+		switch t.Key().Kind() {
+		case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
+			if _, ok := path0.(int); !ok {
+				return e()
+			}
+			extractedO := v.MapIndex(reflect.ValueOf(path0))
+			if !extractedO.IsValid() {
+				return e()
+			}
+			newO := extractedO.Interface()
+			return a.extract(path[1:], fullPath, &newO)
+
+		case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
+			index, ok := path0.(int64)
+			if !ok || index < 0 {
+				return e()
+			}
+			uindex = uint64(index)
+			aindex = uint(uindex)
+			goto mapIndexUint
+		mapIndexUint:
+			extractedO := v.MapIndex(reflect.ValueOf(aindex))
+			if !extractedO.IsValid() {
+				return e()
+			}
+			newO := extractedO.Interface()
+			return a.extract(path[1:], fullPath, &newO)
+
+		case reflect.String:
+			if _, ok := path0.(string); !ok {
+				return e()
+			}
+			extractedO := v.MapIndex(reflect.ValueOf(path0))
+			if !extractedO.IsValid() {
+				return e()
+			}
+			newO := extractedO.Interface()
+			return a.extract(path[1:], fullPath, &newO)
 		}
-		extractedO := v.MapIndex(reflect.ValueOf(path0))
-		if !extractedO.IsValid() {
-			return nil, fmt.Errorf("%s: Can not find path 3", fullPath)
-		}
-		newO := extractedO.Interface()
-		return a.extract(path[1:], fullPath, &newO)
 
 	case reflect.Struct:
 		name, ok := path0.(string)
 		if !ok {
-			return nil, fmt.Errorf("%s: Can not find path 10", fullPath)
+			return e()
 		}
 		sfield, ok := t.FieldByName(name)
 		if !ok {
-			return nil, fmt.Errorf("%s: Can not find path 11", fullPath)
+			return e()
 		}
 		if !sfield.IsExported() {
-			return nil, fmt.Errorf("%s: Path not exported", fullPath)
+			return e()
 		}
 		field := v.FieldByName(name)
 		if !field.IsValid() {
-			return nil, fmt.Errorf("%s: Can not find path 13", fullPath)
+			return e()
 		}
 		newO := field.Interface()
 		return a.extract(path[1:], fullPath, &newO)
 
 	}
-	return nil, fmt.Errorf("%s: Can not find path", fullPath)
+	return e()
 }

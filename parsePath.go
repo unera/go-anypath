@@ -105,11 +105,11 @@ tr5:
 tr13:
 //line parsePath.rl:50
 {
-				index, err := strconv.ParseInt(string(data[ts:te]), 10, 32)
+				index, err := strconv.ParseInt(string(data[ts:te]), 10, 64)
 				if err != nil {
 					return nil, err
 				}
-				pushFound(int(index))
+				pushFound(index)
 			}
 	goto st8
 	st8:
@@ -170,11 +170,11 @@ tr7:
 tr14:
 //line parsePath.rl:50
 {
-				index, err := strconv.ParseInt(string(data[ts:te]), 10, 32)
+				index, err := strconv.ParseInt(string(data[ts:te]), 10, 64)
 				if err != nil {
 					return nil, err
 				}
-				pushFound(int(index))
+				pushFound(index)
 			}
 	goto st3
 	st3:
@@ -209,11 +209,11 @@ tr8:
 tr15:
 //line parsePath.rl:50
 {
-				index, err := strconv.ParseInt(string(data[ts:te]), 10, 32)
+				index, err := strconv.ParseInt(string(data[ts:te]), 10, 64)
 				if err != nil {
 					return nil, err
 				}
-				pushFound(int(index))
+				pushFound(index)
 			}
 	goto st4
 	st4:

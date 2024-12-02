@@ -76,13 +76,13 @@ func TestParsePath(t *testing.T) {
 		},
 		test{
 			Path:        "[27]",
-			Await:       []any{27},
+			Await:       []any{int64(27)},
 			IsError:     false,
 			Description: "Index in path",
 		},
 		test{
 			Path:        "[-2]",
-			Await:       []any{-2},
+			Await:       []any{int64(-2)},
 			IsError:     false,
 			Description: "Negative Index in path",
 		},
@@ -118,7 +118,7 @@ func TestParsePath(t *testing.T) {
 		},
 		test{
 			Path:        ".abc[123].def[345].cde",
-			Await:       []any{"abc", 123, "def", 345, "cde"},
+			Await:       []any{"abc", int64(123), "def", int64(345), "cde"},
 			IsError:     false,
 			Description: "Composite path",
 		},
